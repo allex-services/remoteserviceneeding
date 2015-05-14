@@ -1,0 +1,21 @@
+{
+  "name": "allex_remoteserviceneedingservice",
+  "version": "0.1.0",
+  "description": "RemoteServiceNeedingService",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@gitlab.hers.rs:allex_services/remoteserviceneeding.git"
+  },
+  "keywords": [
+    "ecosystem:allex",
+    "Service",
+    "RemoteServiceNeeding"
+  ],
+  "author": "HERS Belgrade",
+  "license": "ISC"
+}
+
