@@ -1,1 +1,1 @@
-module.exports = ['timeout'];
+module.exports = ['ipaddress','tcpport','httpport','wsport','timeout'];
