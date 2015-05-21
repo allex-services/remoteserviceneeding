@@ -1,15 +1,20 @@
 module.exports = {
   record:{
     fields:[{
-      name: 'ipaddress'
+      name: 'ipaddress',
+      default: 0
     },{
-      name: 'tcpport'
+      name: 'tcpport',
+      default: 0
     },{
-      name: 'httpport'
+      name: 'httpport',
+      default: 0
     },{
-      name: 'wsport'
+      name: 'wsport',
+      default: 0
     },{
-      name: 'timeout'
+      name: 'timeout',
+      default: 60
     }]
   }
 };
