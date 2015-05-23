@@ -1,8 +1,7 @@
 module.exports = {
   record:{
     fields:[{
-      name: 'ipaddress',
-      default: 0
+      name: 'ipaddress'
     },{
       name: 'tcpport',
       default: 0
