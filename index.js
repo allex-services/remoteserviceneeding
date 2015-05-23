@@ -1,7 +1,7 @@
 function createServicePack(execlib){
-  var execSuite = execlib.execSuite;
-  NeedingServicePack = execSuite.registry.register('allex_needingservice'),
-  ParentServicePack = NeedingServicePack;
+  var execSuite = execlib.execSuite,
+      NeedingServicePack = execSuite.registry.register('allex_needingservice'),
+      ParentServicePack = NeedingServicePack;
 
   return {
     Service: require('./servicecreator')(execlib,ParentServicePack),
