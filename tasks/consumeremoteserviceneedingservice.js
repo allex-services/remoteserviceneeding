@@ -14,6 +14,7 @@ function createConsumeRemoteServiceNeedingService(execlib){
     }
     this.services = prophash.servicesTable;
     this.spawner = prophash.spawner;
+    this.newServiceListener = prophash.newServiceEvent.attach(this.onNewService.bind(this));
     this.spawnbids = new lib.Map;
   }
   lib.inherit(RemoteServiceNeedingServiceConsumer,SinkTask);
@@ -23,6 +24,8 @@ function createConsumeRemoteServiceNeedingService(execlib){
     }
     this.spawnbids.destroy(); //could reject all remaining defers
     this.spawnbids = null;
+    this.newServiceListener.destroy();
+    this.newServiceListener = null;
     this.spawner = null;
     this.services = null;
     this.myIP = null;
@@ -76,7 +79,14 @@ function createConsumeRemoteServiceNeedingService(execlib){
     this.spawnbids.add(need.instancename,defer);
     this.spawner(need,challenge,defer);
   };
-  RemoteServiceNeedingServiceConsumer.prototype.compulsoryConstructionProperties = ['sink','myIP','servicesTable','spawner'];
+  RemoteServiceNeedingServiceConsumer.prototype.onNewService = function(servicerecord){
+    var spawnbiddefer = this.spawnbids.remove(servicerecord.instancename);
+    if(spawnbiddefer){
+      servicerecord.ipaddress = this.myIP;
+      spawnbiddefer.resolve(servicerecord);
+    }
+  };
+  RemoteServiceNeedingServiceConsumer.prototype.compulsoryConstructionProperties = ['sink','myIP','servicesTable','spawner','newServiceEvent'];
   return RemoteServiceNeedingServiceConsumer;
 }
 
