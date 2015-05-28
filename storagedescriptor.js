@@ -3,14 +3,11 @@ module.exports = {
     fields:[{
       name: 'ipaddress'
     },{
-      name: 'tcpport',
-      default: 0
+      name: 'tcpport'
     },{
-      name: 'httpport',
-      default: 0
+      name: 'httpport'
     },{
-      name: 'wsport',
-      default: 0
+      name: 'wsport'
     },{
       name: 'timeout',
       default: 60

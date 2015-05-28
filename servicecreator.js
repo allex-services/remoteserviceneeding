@@ -10,7 +10,25 @@ function createRemoteServiceNeedingService(execlib,ParentServicePack){
   }
 
   function RemoteServiceNeedingService(prophash){
-    prophash.satisfaction='ipaddress';
+    prophash.satisfaction={
+      op:'and',
+      filters: [{
+        op: 'exists',
+        field: 'ipaddress'
+      },{
+        op: 'or',
+        filters: [{
+          op: 'exists',
+          field: 'tcpport'
+        },{
+          op: 'exists',
+          field: 'httpport'
+        },{
+          op: 'exists',
+          field: 'wsport'
+        }]
+      }]
+    };//'ipaddress';
     ParentService.call(this,prophash);
   }
   ParentService.inherit(RemoteServiceNeedingService,factoryCreator,require('./storagedescriptor'));
