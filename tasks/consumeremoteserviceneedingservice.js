@@ -15,6 +15,7 @@ function createConsumeRemoteServiceNeedingService(execlib){
     this.services = prophash.servicesTable;
     this.spawner = prophash.spawner;
     this.newServiceListener = prophash.newServiceEvent.attach(this.onNewService.bind(this));
+    this.onMissingModule = prophash.onMissingModule;
     this.spawnbids = new lib.Map;
   }
   lib.inherit(RemoteServiceNeedingServiceConsumer,SinkTask);
@@ -24,6 +25,7 @@ function createConsumeRemoteServiceNeedingService(execlib){
     }
     this.spawnbids.destroy(); //could reject all remaining defers
     this.spawnbids = null;
+    this.onMissingModule = null;
     this.newServiceListener.destroy();
     this.newServiceListener = null;
     this.spawner = null;
@@ -45,13 +47,27 @@ function createConsumeRemoteServiceNeedingService(execlib){
       respondToChallenge:this.doSpawn.bind(this)
     });
   };
+  RemoteServiceNeedingServiceConsumer.prototype.onMissingModuleResult = function(d,result){
+    console.log('missing module installed',result);
+    if(result){
+      d.resolve(true);
+    }else{
+      d.reject(true);
+    }
+  };
   RemoteServiceNeedingServiceConsumer.prototype.isNeedBiddable = function(need){
     try{
       registry.register(need.modulename);
     }
     catch(e){
-      console.error(e.stack);
-      console.error(e);
+      if(e.code==='MODULE_NOT_FOUND' && this.onMissingModule){
+        var d = q.defer();
+        this.onMissingModule(e,this.onMissingModuleResult.bind(this,d));
+        return d.promise;
+      }else{
+        console.error(e.stack);
+        console.error(e);
+      }
       return false;
     }
     var ret = !this.spawnbids.get(need.instancename);
