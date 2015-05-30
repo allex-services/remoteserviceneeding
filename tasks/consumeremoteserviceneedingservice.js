@@ -35,7 +35,8 @@ function createConsumeRemoteServiceNeedingService(execlib){
     SinkTask.prototype.__cleanUp.call(this);
   };
   RemoteServiceNeedingServiceConsumer.prototype.go = function(){
-    if(!this.myIP){
+    var myip = this.myIP;
+    if(!myip){
       this.log('will not consume RemoteServiceNeedingService, I have no myIP');
       this.destroy();
     }
@@ -43,6 +44,7 @@ function createConsumeRemoteServiceNeedingService(execlib){
       sink:this.sink,
       shouldServeNeeds:function(){return true;},
       shouldServeNeed:this.isNeedBiddable.bind(this),
+      bidForNeed: function(needing,defer){defer.resolve({ipaddress:myip});},
       identityForNeed:this.identityForNeed.bind(this),
       respondToChallenge:this.doSpawn.bind(this)
     });
