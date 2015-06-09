@@ -72,12 +72,7 @@ function createConsumeRemoteServiceNeedingService(execlib){
       }
       return false;
     }
-    var ret = !this.spawnbids.get(need.instancename);
-    if(!ret){
-      console.trace();
-      console.error('How come I check on',need.instancename,'again?!');
-    }
-    return ret;
+    return !this.spawnbids.get(need.instancename);
   };
   RemoteServiceNeedingServiceConsumer.prototype.identityForNeed = function(need){
     return {name:this.myIP};
