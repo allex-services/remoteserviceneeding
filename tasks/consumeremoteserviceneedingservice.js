@@ -60,7 +60,7 @@ function createConsumeRemoteServiceNeedingService(execlib){
   };
   RemoteServiceNeedingServiceConsumer.prototype.isNeedBiddable = function(need){
     console.log(this.myIP,need);
-    if(need && need.ipaddress && this.myIP && need!==this.myIP){
+    if(need && need.ipaddress && this.myIP && need.ipaddress!==this.myIP){
       return false;
     }
     try{
