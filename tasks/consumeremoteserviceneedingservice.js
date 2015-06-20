@@ -51,7 +51,7 @@ function createConsumeRemoteServiceNeedingService(execlib){
     });
   };
   RemoteServiceNeedingServiceConsumer.prototype.onMissingModuleResult = function(d,result){
-    console.log('missing module installed',result);
+    this.log('missing module installed',result);
     if(result){
       d.resolve(true);
     }else{
@@ -59,7 +59,7 @@ function createConsumeRemoteServiceNeedingService(execlib){
     }
   };
   RemoteServiceNeedingServiceConsumer.prototype.isNeedBiddable = function(need){
-    console.log(this.myIP,need);
+    this.log(this.myIP,need);
     if(need && need.ipaddress && this.myIP && need.ipaddress!==this.myIP){
       return false;
     }
