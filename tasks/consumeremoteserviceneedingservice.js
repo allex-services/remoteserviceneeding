@@ -24,7 +24,7 @@ function createConsumeRemoteServiceNeedingService(execlib){
     if(!this.sink){
       return;
     }
-    if(this.spawnbid){
+    if(this.spawnbid && this.spawnbid.reject){
       this.spawnbid.reject(new lib.Error('RemoteServiceNeedingService consumer going down'));
     }
     this.spawnbid = null;
