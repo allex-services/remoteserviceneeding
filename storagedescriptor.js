@@ -22,6 +22,10 @@ module.exports = {
     },{
       name: 'wsport'
     },{
+      name: 'debug'
+    },{
+      name: 'debug_brk'
+    },{
       name: 'timeout',
       default: 60
     }]
