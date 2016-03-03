@@ -61,11 +61,13 @@ function createConsumeRemoteServiceNeedingService(execlib){
     }
   };
   RemoteServiceNeedingServiceConsumer.prototype.isNeedBiddable = function(need){
-    this.log(this.myIP,need);
+    this.log('isNeedBiddable?', this.myIP,need);
     if(this.spawnbid){
+      this.log('need is not biddable, have my spawnbid');
       return false;
     }
     if(need && need.ipaddress && this.myIP && need.ipaddress!==this.myIP){
+      this.log('ipaddress mismatch', need.ipaddress, this.myIP);
       return false;
     }
     if(!registry.get(need.modulename)){
@@ -79,6 +81,7 @@ function createConsumeRemoteServiceNeedingService(execlib){
   };
   RemoteServiceNeedingServiceConsumer.prototype.doSpawn = function(need,challenge,defer){
     if(this.spawnbid !== true){
+      console.error('cannot spawn twice!');
       var e = new lib.Error('INTERNAL_ERROR','Cannot spawn twice');
       e.instancename = need.instancename;
       throw e;
