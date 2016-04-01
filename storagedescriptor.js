@@ -22,6 +22,8 @@ module.exports = {
     },{
       name: 'wsport'
     },{
+      name: 'pid'
+    },{
       name: 'debug'
     },{
       name: 'debug_brk'

@@ -15,6 +15,9 @@ function createRemoteServiceNeedingService(execlib,ParentServicePack){
       op:'and',
       filters: [{
         op: 'exists',
+        field: 'pid'
+      },{
+        op: 'exists',
         field: 'ipaddress'
       },{
         op: 'or',

@@ -61,14 +61,25 @@ function createConsumeRemoteServiceNeedingService(execlib){
     }
   };
   RemoteServiceNeedingServiceConsumer.prototype.isNeedBiddable = function(need){
-    this.log('isNeedBiddable?', this.myIP,need);
+    if (need.ipaddress) {
+    this.log('isNeedBiddable?', this.myIP,need.ipaddress);
+    }
     if(this.spawnbid){
-      this.log('need is not biddable, have my spawnbid');
+      //this.log('need is not biddable, have my spawnbid');
       return false;
     }
-    if(need && need.ipaddress && this.myIP && need.ipaddress!==this.myIP){
-      this.log('ipaddress mismatch', need.ipaddress, this.myIP);
-      return false;
+    if(need && need.ipaddress && this.myIP) {
+      if(need.ipaddress.indexOf('/') > 0) {
+        this.log('need to check', this.myIP, 'against', need.ipaddress);
+        if(!lib.cidrMatch(need.ipaddress, this.myIP)) {
+          this.log('sorry');
+          return false;
+        }
+        this.log('ok');
+      } else if(need.ipaddress!==this.myIP){
+        this.log('ipaddress mismatch', need.ipaddress, this.myIP);
+        return false;
+      }
     }
     if(!registry.get(need.modulename)){
       return registry.register(need.modulename);
