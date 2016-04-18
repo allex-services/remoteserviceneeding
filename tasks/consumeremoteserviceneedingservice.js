@@ -65,7 +65,7 @@ function createConsumeRemoteServiceNeedingService(execlib){
     this.log('isNeedBiddable?', this.myIP,need.ipaddress);
     }
     if(this.spawnbid){
-      //this.log('need is not biddable, have my spawnbid');
+      this.log('need is not biddable, have my spawnbid');
       return false;
     }
     if(need && need.ipaddress && this.myIP) {
@@ -105,6 +105,8 @@ function createConsumeRemoteServiceNeedingService(execlib){
       }
     })){
       servobj.service.ipaddress = this.myIP;
+      this.log('already have', servobj.service, this.spawnbid);
+      this.spawnbid = null;
       defer.resolve(servobj.service);
       return;
     }
