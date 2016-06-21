@@ -81,8 +81,8 @@ function createConsumeRemoteServiceNeedingService(execlib){
         return false;
       }
     }
-    if(!registry.get(need.modulename)){
-      return registry.register(need.modulename);
+    if(!registry.getClientSide(need.modulename)){
+      return registry.registerClientSide(need.modulename);
     }
     this.spawnbid = true;
     return true;
