@@ -71,7 +71,7 @@ function createConsumeRemoteServiceNeedingService(execlib){
     if(need && need.ipaddress && this.myIP) {
       if(need.ipaddress.indexOf('/') > 0) {
         this.log('need to check', this.myIP, 'against', need.ipaddress);
-        if(!lib.cidrMatch(need.ipaddress, this.myIP)) {
+        if(!lib.cidrMatch(this.myIP, need.ipaddress)) {
           this.log('sorry');
           return false;
         }
