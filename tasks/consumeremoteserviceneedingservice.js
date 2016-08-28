@@ -49,7 +49,8 @@ function createConsumeRemoteServiceNeedingService(execlib){
       shouldServeNeed:this.isNeedBiddable.bind(this),
       bidForNeed: function(needing,defer){defer.resolve({ipaddress:myip});},
       identityForNeed:this.identityForNeed.bind(this),
-      respondToChallenge:this.doSpawn.bind(this)
+      respondToChallenge:this.doSpawn.bind(this),
+      serveNeedFailed:this.onServeNeedFailed.bind(this)
     });
   };
   RemoteServiceNeedingServiceConsumer.prototype.onMissingModuleResult = function(d,result){
@@ -120,6 +121,9 @@ function createConsumeRemoteServiceNeedingService(execlib){
       servicerecord.ipaddress = this.myIP;
       spawnbiddefer.resolve(servicerecord);
     }
+  };
+  RemoteServiceNeedingServiceConsumer.prototype.onServeNeedFailed = function () {
+    this.spawnbid = null;
   };
   RemoteServiceNeedingServiceConsumer.prototype.compulsoryConstructionProperties = ['sink','myIP','servicesTable','spawner','newServiceEvent'];
   return RemoteServiceNeedingServiceConsumer;
