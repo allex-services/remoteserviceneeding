@@ -119,11 +119,17 @@ function createConsumeRemoteServiceNeedingService(execlib){
     if(spawnbiddefer){
       this.spawnbid = null;
       servicerecord.ipaddress = this.myIP;
-      spawnbiddefer.resolve(servicerecord);
+      if (spawnbiddefer.resolve) {
+        spawnbiddefer.resolve(servicerecord);
+      }
     }
   };
   RemoteServiceNeedingServiceConsumer.prototype.onServeNeedFailed = function () {
+    var spawnbiddefer = this.spawnbid;
     this.spawnbid = null;
+    if (spawnbiddefer && spawnbiddefer.reject) {
+      spawnbiddefer.reject(new lib.Error('SERVE_NEED_FAILED', 'Internal error in serving the Need'));
+    }
   };
   RemoteServiceNeedingServiceConsumer.prototype.compulsoryConstructionProperties = ['sink','myIP','servicesTable','spawner','newServiceEvent'];
   return RemoteServiceNeedingServiceConsumer;
