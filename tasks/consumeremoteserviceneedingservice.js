@@ -6,6 +6,42 @@ function createConsumeRemoteServiceNeedingService(execlib){
       registry = execSuite.registry,
       SinkTask = execSuite.SinkTask,
       taskRegistry = execSuite.taskRegistry;
+  function servfinder (servobj, need, serv) {
+    if(serv.instancename===need.instancename){
+      servobj.service = serv;
+      return true;
+    }
+  }
+  function SpawnBid () {
+    this.spawnbid = true;
+  }
+  SpawnBid.prototype.destroy = function () {
+    if(this.spawnbid && this.spawnbid.reject){
+      this.spawnbid.reject(new lib.Error('RemoteServiceNeedingService consumer going down'));
+    }
+    this.spawnbid = null;
+  };
+  SpawnBid.prototype.waitingForSpawn = function () {
+    return this.spawnbid === true;
+  };
+  SpawnBid.prototype.ackSpawn = function (defer) {
+    this.spawnbid = defer;
+  };
+  SpawnBid.prototype.resolve = function (thingy) {
+    if (this.spawnbid && this.spawnbid.resolve) {
+      this.spawnbid.resolve(thingy);
+    }
+    this.spawnbid = null;
+    this.destroy;
+  };
+  SpawnBid.prototype.reject = function (thingy) {
+    if (this.spawnbid && this.spawnbid.reject) {
+      this.spawnbid.reject(thingy);
+    }
+    this.spawnbid = null;
+    this.destroy;
+  };
+
   function RemoteServiceNeedingServiceConsumer(prophash){
     SinkTask.call(this,prophash);
     this.sink = prophash.sink;
@@ -17,17 +53,18 @@ function createConsumeRemoteServiceNeedingService(execlib){
     this.spawner = prophash.spawner;
     this.newServiceListener = prophash.newServiceEvent.attach(this.onNewService.bind(this));
     this.onMissingModule = prophash.onMissingModule;
-    this.spawnbid = null;
+    this.spawnbids = new lib.Map();
   }
   lib.inherit(RemoteServiceNeedingServiceConsumer,SinkTask);
   RemoteServiceNeedingServiceConsumer.prototype.__cleanUp = function(){
     if(!this.sink){
       return;
     }
-    if(this.spawnbid && this.spawnbid.reject){
-      this.spawnbid.reject(new lib.Error('RemoteServiceNeedingService consumer going down'));
+    if (this.spawnbids) {
+      lib.containerDestroyAll(this.spawnbids);
+      this.spawnbids.destroy();
     }
-    this.spawnbid = null;
+    this.spawnbids = null;
     this.onMissingModule = null;
     this.newServiceListener.destroy();
     this.newServiceListener = null;
@@ -62,18 +99,24 @@ function createConsumeRemoteServiceNeedingService(execlib){
     }
   };
   RemoteServiceNeedingServiceConsumer.prototype.isNeedBiddable = function(need){
-    if (need.ipaddress) {
-    this.log('isNeedBiddable?', this.myIP,need.ipaddress);
+    var needinstname, spawnbid;
+    if (!need) {
+      return false;
     }
-    if(this.spawnbid){
-      this.log('need is not biddable, have my spawnbid');
+    needinstname = need.instancename;
+    spawnbid = this.spawnbids.get(needinstname);
+    if (need.ipaddress) {
+      this.log('isNeedBiddable?', this.myIP,need.ipaddress);
+    }
+    if(spawnbid){
+      this.log('need is not biddable, have a spawnbid named', needinstname);
       return false;
     }
     if(need && need.ipaddress && this.myIP) {
       if(need.ipaddress.indexOf('/') > 0) {
         this.log('need to check', this.myIP, 'against', need.ipaddress);
         if(!lib.cidrMatch(this.myIP, need.ipaddress)) {
-          this.log('sorry');
+        this.log('cidr mismatch', need.ipaddress, this.myIP);
           return false;
         }
         this.log('ok');
@@ -85,50 +128,57 @@ function createConsumeRemoteServiceNeedingService(execlib){
     if(!registry.getClientSide(need.modulename)){
       return registry.registerClientSide(need.modulename);
     }
-    this.spawnbid = true;
+    this.spawnbids.add(needinstname, new SpawnBid());
     return true;
   };
   RemoteServiceNeedingServiceConsumer.prototype.identityForNeed = function(need){
     return {name:this.myIP};
   };
   RemoteServiceNeedingServiceConsumer.prototype.doSpawn = function(need,challenge,defer){
-    if(this.spawnbid !== true){
+    var servobj, servfound, _srvobj, _need, spawnbid;
+    if (!need) {
+      return;
+    }
+    spawnbid = this.spawnbids.get(need.instancename);
+    if(!(spawnbid && spawnbid.waitingForSpawn())){
       console.error('cannot spawn twice!');
       var e = new lib.Error('INTERNAL_ERROR','Cannot spawn twice');
       e.instancename = need.instancename;
       throw e;
     }
-    var servobj={service:null};
-    if(this.services.some(function(serv){
-      if(serv.instancename===need.instancename){
-        servobj.service = serv;
-        return true;
-      }
-    })){
+    servobj={service:null};
+    _srvobj = servobj;
+    _need = need;
+    servfound = this.services.some(servfinder.bind(null, _srvobj, _need));
+    _srvobj = null;
+    _need = null;
+    if(servfound){
       servobj.service.ipaddress = this.myIP;
-      this.log('already have', servobj.service, this.spawnbid);
-      this.spawnbid = null;
+      this.log('already have', servobj.service, spawnbid);
+      spawnbid.destroy();
+      this.spawnbids.remove(need.instancename);
       defer.resolve(servobj.service);
       return;
     }
-    this.spawnbid = defer;
+    spawnbid.ackSpawn(defer);
     this.spawner(need,challenge,defer);
   };
   RemoteServiceNeedingServiceConsumer.prototype.onNewService = function(servicerecord){
-    var spawnbiddefer = this.spawnbid;
-    if(spawnbiddefer){
-      this.spawnbid = null;
-      servicerecord.ipaddress = this.myIP;
-      if (spawnbiddefer.resolve) {
-        spawnbiddefer.resolve(servicerecord);
-      }
+    var spawnbid;
+    spawnbid = this.spawnbids.remove(servicerecord.instancename);
+    if (!spawnbid) {
+      return;
     }
+    servicerecord.ipaddress = this.myIP;
+    spawnbid.resolve(servicerecord);
   };
-  RemoteServiceNeedingServiceConsumer.prototype.onServeNeedFailed = function () {
-    var spawnbiddefer = this.spawnbid;
-    this.spawnbid = null;
-    if (spawnbiddefer && spawnbiddefer.reject) {
-      spawnbiddefer.reject(new lib.Error('SERVE_NEED_FAILED', 'Internal error in serving the Need'));
+  RemoteServiceNeedingServiceConsumer.prototype.onServeNeedFailed = function (need) {
+    if (!need) {
+      return;
+    }
+    var spawnbid = this.spawnbids.remove(need.instancename);
+    if (spawnbid) {
+      spawnbid.reject(new lib.Error('SERVE_NEED_FAILED', 'Internal error in serving the Need'));
     }
   };
   RemoteServiceNeedingServiceConsumer.prototype.compulsoryConstructionProperties = ['sink','myIP','servicesTable','spawner','newServiceEvent'];
