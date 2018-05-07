@@ -176,6 +176,9 @@ function createConsumeRemoteServiceNeedingService(execlib){
     if (!need) {
       return;
     }
+    if (!this.spawnbids) {
+      return;
+    }
     var spawnbid = this.spawnbids.remove(need.instancename);
     if (spawnbid) {
       spawnbid.reject(new lib.Error('SERVE_NEED_FAILED', 'Internal error in serving the Need'));
