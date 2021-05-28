@@ -99,7 +99,7 @@ function createConsumeRemoteServiceNeedingService(execlib){
     }
   };
   RemoteServiceNeedingServiceConsumer.prototype.isNeedBiddable = function(need){
-    var needinstname, spawnbid;
+    var needinstname, spawnbid, modulename;
     if (!need) {
       return false;
     }
@@ -125,8 +125,9 @@ function createConsumeRemoteServiceNeedingService(execlib){
         return false;
       }
     }
-    if(!registry.getClientSide(need.modulename)){
-      return registry.registerClientSide(need.modulename);
+    modulename = need.modulename.indexOf(':')>0 ? need.modulename.split(':')[1] : need.modulename;
+    if(!registry.getClientSide(modulename)){
+      return registry.registerClientSide(modulename);
     }
     this.spawnbids.add(needinstname, new SpawnBid());
     return true;
