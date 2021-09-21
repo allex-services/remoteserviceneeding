@@ -8,7 +8,7 @@ function createServicePack(execlib){
       dependencies: ['allex_needingservice']
     },
     tasks: {
-      dependencies: []
+      dependencies: ['allex:porthandlingjobs:lib']
     }
   };
 }

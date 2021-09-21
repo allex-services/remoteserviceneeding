@@ -1,7 +1,9 @@
-function createConsumeRemoteServiceNeedingService(execlib){
+function createConsumeRemoteServiceNeedingService(execlib, portjobslib){
   'use strict';
   var lib = execlib.lib,
       q = lib.q,
+      qlib = lib.qlib,
+      JobBase = qlib.JobBase,
       execSuite = execlib.execSuite,
       registry = execSuite.registry,
       SinkTask = execSuite.SinkTask,
@@ -12,12 +14,20 @@ function createConsumeRemoteServiceNeedingService(execlib){
       return true;
     }
   }
+  function servfinderbyinstancename (servobj, instancename, serv) {
+    if (serv.instancename === instancename) {
+      servobj.service = serv;
+      return true;
+    }
+  }
   function SpawnBid () {
     this.spawnbid = true;
+    this.spawndescriptor = null;
   }
   SpawnBid.prototype.destroy = function () {
+    this.spawndescriptor = null;
     if(this.spawnbid && this.spawnbid.reject){
-      this.spawnbid.reject(new lib.Error('RemoteServiceNeedingService consumer going down'));
+      this.spawnbid.reject(new lib.Error('REMOTE_SERVICE_NEEEDING_SERVICE_DESTROYING', 'RemoteServiceNeedingService consumer going down'));
     }
     this.spawnbid = null;
   };
@@ -28,18 +38,50 @@ function createConsumeRemoteServiceNeedingService(execlib){
     this.spawnbid = defer;
   };
   SpawnBid.prototype.resolve = function (thingy) {
+    if (this.spawndescriptor) {
+      return;
+    }
+    this.spawndescriptor = thingy;
     if (this.spawnbid && this.spawnbid.resolve) {
-      this.spawnbid.resolve(thingy);
+      this.checkPostSpawn();
+      return;
     }
     this.spawnbid = null;
-    this.destroy;
+    this.destroy();
   };
   SpawnBid.prototype.reject = function (thingy) {
     if (this.spawnbid && this.spawnbid.reject) {
       this.spawnbid.reject(thingy);
     }
     this.spawnbid = null;
-    this.destroy;
+    this.destroy();
+  };
+  SpawnBid.prototype.checkPostSpawn = function () {
+    //this.spawnbid.resolve(thingy);
+    if (!this.spawndescriptor) {
+      this.spawnbid.resolve(this.spawndescriptor);
+      return;
+    }
+    (new portjobslib.Repeatable(
+      portjobslib.spawnDescriptorToPorts(this.spawndescriptor),
+      portjobslib.AnyTaken,
+      10,
+      lib.intervals.Second,
+      function(anytaken) {return anytaken;}
+    )).go().done(
+      this.onCheckPostSpawn.bind(this),
+      this.onCheckPostSpawnFailed.bind(this)
+    );
+  };
+  SpawnBid.prototype.onCheckPostSpawn = function (isok) {
+    if (isok) {
+      this.spawnbid.resolve(this.spawndescriptor);
+      return;
+    }
+    this.spawnbid.reject(new lib.Error('UNSUCCESSFUL_SERVICE_SPAWN', 'No declared ports active'));
+  };
+  SpawnBid.prototype.onCheckPostSpawnFailed = function (reason) {
+    this.spawnbid.reject(new lib.Error('UNSUCCESSFUL_SERVICE_SPAWN', 'No declared ports active'));
   };
 
   function RemoteServiceNeedingServiceConsumer(prophash){
@@ -127,10 +169,52 @@ function createConsumeRemoteServiceNeedingService(execlib){
     }
     modulename = need.modulename.indexOf(':')>0 ? need.modulename.split(':')[1] : need.modulename;
     if(!registry.getClientSide(modulename)){
-      return registry.registerClientSide(modulename);
+      var ret = registry.registerClientSide(modulename).then(
+        this.onBiddableModuleChecked.bind(this, need),
+        function () {return false;}
+      );
+      need = null;
+      return ret;
     }
-    this.spawnbids.add(needinstname, new SpawnBid());
-    return true;
+    return this.onBiddableModuleChecked(need);
+  }
+  RemoteServiceNeedingServiceConsumer.prototype.onBiddableModuleChecked = function (need, moduleinst_ignored) {
+    var spawnbid;
+    var needinstname = need.instancename;
+    var spawnedforinstname = this.spawnedServiceForName(needinstname);
+    if (spawnedforinstname) {
+      spawnbid = this.spawnbids.get(needinstname);
+      if (!spawnbid) {
+        this.spawnbids.add(needinstname, new SpawnBid());
+        return true;
+      }
+      return spawnbid.waitingForSpawn();
+    }
+    var ret = (new portjobslib.Repeatable(
+      portjobslib.spawnDescriptorToPorts(need),
+      portjobslib.AllFree,
+      10,
+      lib.intervals.Second,
+      function(allfree) {return allfree;}
+    )).go().then(
+      this.onBiddablePortCheck.bind(this,needinstname),
+      function () {return false;}
+    );
+    needinstname = null;
+    return ret;
+  };
+  RemoteServiceNeedingServiceConsumer.prototype.onBiddablePortCheck = function (needinstname, isok) {
+    if (!this.spawnbids) {
+      return false;
+    }
+    if (isok) {
+      if (this.spawnbids.get(needinstname)) {
+        this.log('need is not biddable, have a spawnbid named', needinstname);
+        return false;
+      }
+      this.spawnbids.add(needinstname, new SpawnBid());
+    }
+    return isok;
   };
   RemoteServiceNeedingServiceConsumer.prototype.identityForNeed = function(need){
     return {name:this.myIP};
@@ -184,6 +268,14 @@ function createConsumeRemoteServiceNeedingService(execlib){
     if (spawnbid) {
       spawnbid.reject(new lib.Error('SERVE_NEED_FAILED', 'Internal error in serving the Need'));
     }
+  };
+  RemoteServiceNeedingServiceConsumer.prototype.spawnedServiceForName = function (instancename) {
+    var servobj = {service:null};
+    this.services.some(servfinderbyinstancename.bind(null, servobj, instancename));
+    var ret = servobj.service;
+    servobj = null;
+    instancename = null;
+    return ret;
   };
   RemoteServiceNeedingServiceConsumer.prototype.compulsoryConstructionProperties = ['sink','myIP','servicesTable','spawner','newServiceEvent'];
   return RemoteServiceNeedingServiceConsumer;

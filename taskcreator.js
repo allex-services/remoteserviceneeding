@@ -1,8 +1,8 @@
-function createTasks(execlib) {
+function createTasks(execlib, portjobslib) {
   'use strict';
   return [{
     name: 'consumeRemoteServiceNeedingService',
-    klass: require('./tasks/consumeremoteserviceneedingservice')(execlib)
+    klass: require('./tasks/consumeremoteserviceneedingservice')(execlib, portjobslib)
   }];
 };
 
