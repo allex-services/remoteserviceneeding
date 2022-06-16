@@ -95,6 +95,7 @@ function createConsumeRemoteServiceNeedingService(execlib, portjobslib){
     this.spawner = prophash.spawner;
     this.newServiceListener = prophash.newServiceEvent.attach(this.onNewService.bind(this));
     this.onMissingModule = prophash.onMissingModule;
+    this.needsCollection = prophash.needsCollection;
     this.spawnbids = new lib.Map();
   }
   lib.inherit(RemoteServiceNeedingServiceConsumer,SinkTask);
@@ -107,6 +108,7 @@ function createConsumeRemoteServiceNeedingService(execlib, portjobslib){
       this.spawnbids.destroy();
     }
     this.spawnbids = null;
+    this.needsCollection = null;
     this.onMissingModule = null;
     this.newServiceListener.destroy();
     this.newServiceListener = null;
@@ -129,7 +131,8 @@ function createConsumeRemoteServiceNeedingService(execlib, portjobslib){
       bidForNeed: function(needing,defer){defer.resolve({ipaddress:myip});},
       identityForNeed:this.identityForNeed.bind(this),
       respondToChallenge:this.doSpawn.bind(this),
-      serveNeedFailed:this.onServeNeedFailed.bind(this)
+      serveNeedFailed:this.onServeNeedFailed.bind(this),
+      needsCollection:this.needsCollection
     });
   };
   RemoteServiceNeedingServiceConsumer.prototype.onMissingModuleResult = function(d,result){
@@ -220,8 +223,9 @@ function createConsumeRemoteServiceNeedingService(execlib, portjobslib){
     return {name:this.myIP};
   };
   RemoteServiceNeedingServiceConsumer.prototype.doSpawn = function(need,challenge,defer){
-    var servobj, servfound, _srvobj, _need, spawnbid;
+    var servobj, servfound, _srvobj, _need, spawnbid, spawndefer;
     if (!need) {
+      defer.reject(new lib.Error('NO_NEED'));
       return;
     }
     spawnbid = this.spawnbids.get(need.instancename);
@@ -229,7 +233,12 @@ function createConsumeRemoteServiceNeedingService(execlib, portjobslib){
       console.error('cannot spawn twice!');
       var e = new lib.Error('INTERNAL_ERROR','Cannot spawn twice');
       e.instancename = need.instancename;
-      throw e;
+      defer.reject(e);
+      return;
+    }
+    if (!lib.isArray(this.services)) {
+      defer.reject(new lib.Error('REMOTE_SERVICE_NEEDING_CONSUMER_DESTROYED'));
+      return;
     }
     servobj={service:null};
     _srvobj = servobj;
@@ -240,16 +249,35 @@ function createConsumeRemoteServiceNeedingService(execlib, portjobslib){
     if(servfound){
       servobj.service.ipaddress = this.myIP;
       this.log('already have', servobj.service, spawnbid);
-      spawnbid.destroy();
-      this.spawnbids.remove(need.instancename);
+      if (spawnbid) {
+        spawnbid.destroy();
+        this.spawnbids.remove(need.instancename);
+      }
       defer.resolve(servobj.service);
       return;
     }
+    spawndefer = q.defer();
+    spawndefer.promise.then(this.onSpawnedLifeCycle.bind(this, need), defer.reject.bind(defer));
     spawnbid.ackSpawn(defer);
-    this.spawner(need,challenge,defer);
+    this.spawner(need,challenge,spawndefer);
+    need = null;
+  };
+  RemoteServiceNeedingServiceConsumer.prototype.onSpawnedLifeCycle = function (need, supersink) {
+    if (!this.spawnbids) {
+      return;
+    }
+    if (!(supersink && supersink.destroyed)) {
+      this.spawnbids.remove(need.instancename);
+      return;
+    }
+    supersink.destroyed.attach(this.onSpawnedLifeCycle.bind(this, need, null));
+    need = null;
   };
   RemoteServiceNeedingServiceConsumer.prototype.onNewService = function(servicerecord){
     var spawnbid;
+    if (!this.spawnbids){
+      return;
+    }
     spawnbid = this.spawnbids.remove(servicerecord.instancename);
     if (!spawnbid) {
       return;
@@ -258,13 +286,14 @@ function createConsumeRemoteServiceNeedingService(execlib, portjobslib){
     spawnbid.resolve(servicerecord);
   };
   RemoteServiceNeedingServiceConsumer.prototype.onServeNeedFailed = function (need) {
+    var spawnbid;
     if (!need) {
       return;
     }
     if (!this.spawnbids) {
       return;
     }
-    var spawnbid = this.spawnbids.remove(need.instancename);
+    spawnbid = this.spawnbids.remove(need.instancename);
     if (spawnbid) {
       spawnbid.reject(new lib.Error('SERVE_NEED_FAILED', 'Internal error in serving the Need'));
     }

@@ -1,6 +1,6 @@
 {
   "name": "allex_remoteserviceneedingservice",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "RemoteServiceNeedingService",
   "main": "index.js",
   "scripts": {
