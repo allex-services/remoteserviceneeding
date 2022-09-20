@@ -182,9 +182,10 @@ function createConsumeRemoteServiceNeedingService(execlib, portjobslib){
     return this.onBiddableModuleChecked(need);
   }
   RemoteServiceNeedingServiceConsumer.prototype.onBiddableModuleChecked = function (need, moduleinst_ignored) {
-    var spawnbid;
-    var needinstname = need.instancename;
-    var spawnedforinstname = this.spawnedServiceForName(needinstname);
+    var spawnbid, needinstname, spawnedforinstname;
+    if (!this.services) return false;
+    needinstname = need.instancename;
+    spawnedforinstname = this.spawnedServiceForName(needinstname);
     if (spawnedforinstname) {
       spawnbid = this.spawnbids.get(needinstname);
       if (!spawnbid) {
@@ -299,7 +300,11 @@ function createConsumeRemoteServiceNeedingService(execlib, portjobslib){
     }
   };
   RemoteServiceNeedingServiceConsumer.prototype.spawnedServiceForName = function (instancename) {
-    var servobj = {service:null};
+    var servobj;
+    if (!this.services) {
+      return null;
+    }
+    servobj = {service:null};
     this.services.some(servfinderbyinstancename.bind(null, servobj, instancename));
     var ret = servobj.service;
     servobj = null;

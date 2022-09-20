@@ -36,6 +36,8 @@ module.exports = {
     },{
       name: 'prof'
     },{
+      name: 'gate'
+    },{
       name: 'timeout',
       default: 60
     }]
